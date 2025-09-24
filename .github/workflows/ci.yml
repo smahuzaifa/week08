@@ -1,0 +1,51 @@
+name: CI – Build images on PR
+
+on:
+  pull_request:
+    branches: [ main, development/test ]
+    paths:
+      - "backend/**"
+      - "frontend/**"
+      - ".github/workflows/ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-backends:
+    name: Build backends (no push)
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        svc:
+          - name: product_service
+            context: backend/product_service
+          - name: order_service
+            context: backend/order_service
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build ${{ matrix.svc.name }}
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.svc.context }}
+          push: false          # <-- CI only
+          load: false
+
+  build-frontend:
+    name: Build frontend (no push)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: frontend
+          push: false
+          load: false
